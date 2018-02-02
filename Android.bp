@@ -17,15 +17,19 @@
 // the signapk tool (a .jar application used to sign packages)
 // ============================================================
 java_library_host {
-    name: "signapk",
+    name: "signapk-lambda",
     srcs: ["src/**/*.java"],
     manifest: "SignApk.mf",
     static_libs: [
         "apksig",
-        "bouncycastle",
-        "bouncycastle-bcpkix",
+        "bouncycastle-jdk15on-lambda",
         "conscrypt",
     ],
 
     required: ["libconscrypt_openjdk_jni"],
+}
+
+java_import_host {
+  name: "bouncycastle-jdk15on-lambda",
+  jars: ["bcprov-jdk15on-161.jar", "bcpkix-jdk15on-161.jar"],
 }
