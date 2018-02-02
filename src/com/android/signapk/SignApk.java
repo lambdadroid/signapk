@@ -29,10 +29,13 @@ import org.bouncycastle.cms.CMSSignedDataGenerator;
 import org.bouncycastle.cms.CMSTypedData;
 import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8DecryptorProviderBuilder;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
+import org.bouncycastle.pkcs.PKCSException;
 import org.bouncycastle.util.encoders.Base64;
 import org.conscrypt.OpenSSLProvider;
 
@@ -222,10 +225,10 @@ class SignApk {
      * @param keyFile The file containing the private key
      */
     private static PKCS8EncodedKeySpec decryptPrivateKey(byte[] encryptedPrivateKey, File keyFile)
-        throws GeneralSecurityException {
-        EncryptedPrivateKeyInfo epkInfo;
+        throws Exception {
+        PKCS8EncryptedPrivateKeyInfo epkInfo;
         try {
-            epkInfo = new EncryptedPrivateKeyInfo(encryptedPrivateKey);
+            epkInfo = new PKCS8EncryptedPrivateKeyInfo(encryptedPrivateKey);
         } catch (IOException ex) {
             // Probably not an encrypted key.
             return null;
@@ -233,15 +236,11 @@ class SignApk {
 
         char[] password = readPassword(keyFile).toCharArray();
 
-        SecretKeyFactory skFactory = SecretKeyFactory.getInstance(epkInfo.getAlgName());
-        Key key = skFactory.generateSecret(new PBEKeySpec(password));
-
-        Cipher cipher = Cipher.getInstance(epkInfo.getAlgName());
-        cipher.init(Cipher.DECRYPT_MODE, key, epkInfo.getAlgParameters());
-
         try {
-            return epkInfo.getKeySpec(cipher);
-        } catch (InvalidKeySpecException ex) {
+            PrivateKeyInfo keyInfo = epkInfo.decryptPrivateKeyInfo(
+                new JceOpenSSLPKCS8DecryptorProviderBuilder().build(password));
+            return new PKCS8EncodedKeySpec(keyInfo.getEncoded());
+        } catch (PKCSException ex) {
             System.err.println("signapk: Password for " + keyFile + " may be bad.");
             throw ex;
         }
@@ -249,7 +248,7 @@ class SignApk {
 
     /** Read a PKCS#8 format private key. */
     private static PrivateKey readPrivateKey(File file)
-        throws IOException, GeneralSecurityException {
+        throws IOException, Exception {
         DataInputStream input = new DataInputStream(new FileInputStream(file));
         try {
             byte[] bytes = new byte[(int) file.length()];

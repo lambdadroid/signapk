@@ -18,12 +18,19 @@ LOCAL_PATH := $(call my-dir)
 # the signapk tool (a .jar application used to sign packages)
 # ============================================================
 include $(CLEAR_VARS)
-LOCAL_MODULE := signapk
+LOCAL_MODULE := signapk-lambdadroid
 LOCAL_SRC_FILES := $(call all-java-files-under, src)
 LOCAL_JAR_MANIFEST := SignApk.mf
-LOCAL_STATIC_JAVA_LIBRARIES := bouncycastle-host bouncycastle-bcpkix-host conscrypt-host
+LOCAL_STATIC_JAVA_LIBRARIES := bcprov-jdk15on bcpkix-jdk15on conscrypt-host
 LOCAL_REQUIRED_MODULES := libconscrypt_openjdk_jni
 include $(BUILD_HOST_JAVA_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_IS_HOST_MODULE := true
+LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := \
+    bcprov-jdk15on:bcprov-jdk15on-159.jar \
+    bcpkix-jdk15on:bcpkix-jdk15on-159.jar
+include $(BUILD_MULTI_PREBUILT)
 
 ifeq ($(TARGET_BUILD_APPS),)
 ifeq ($(BRILLO),)
